@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getRoomById, createRoom, updateRoom } from '../services/roomsService'
-import { getMyLocales, createLocal } from '../services/localesService'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { createRoom, getRoomById, updateRoom } from '../services/roomsService'
 
-const EMPTY = {
-  title: '', description: '', city: '', difficulty: 'medium',
-  durationMin: 60, playersMin: 2, playersMax: 6, priceFrom: 15,
-  localId: '', themes: []
+function isValidHHmm(value) {
+  // 00:00 a 23:59
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value)
+}
+
+function normalizeSlot(value) {
+  return value.trim()
 }
 
 function RoomFormPage() {
@@ -14,196 +16,371 @@ function RoomFormPage() {
   const navigate = useNavigate()
   const isEdit = Boolean(id)
 
-  const [form, setForm]         = useState(EMPTY)
-  const [themeInput, setThemeInput] = useState('')
-  const [imageBase64, setImageBase64] = useState(null)
-  const [preview, setPreview]   = useState(null)
-  const [locales, setLocales]   = useState([])
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
 
-  // Cargar locales y sala (si editamos)
+  const [weekSlotInput, setWeekSlotInput] = useState('')
+  const [weekendSlotInput, setWeekendSlotInput] = useState('')
+
+  const [form, setForm] = useState({
+    localId: '',
+    title: '',
+    description: '',
+    city: '',
+    themesText: '',
+    difficulty: 'easy',
+    durationMin: 60,
+    playersMin: 2,
+    playersMax: 6,
+    priceFrom: 60,
+
+    slotDurationMin: 60,
+    weekSlots: [],
+    weekendSlots: [],
+  })
+
+  const themes = useMemo(() => {
+    const parts = (form.themesText || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+
+    return Array.from(new Set(parts))
+  }, [form.themesText])
+
   useEffect(() => {
-    getMyLocales()
-      .then(res => setLocales(res.data.locales || res.data || []))
-      .catch(() => {})
+    if (!isEdit) return
 
-    if (isEdit) {
-      getRoomById(id).then(res => {
+    async function loadRoom() {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const res = await getRoomById(id)
         const room = res.data.room || res.data
-        setForm({
-          title: room.title, description: room.description, city: room.city,
-          difficulty: room.difficulty, durationMin: room.durationMin,
-          playersMin: room.playersMin, playersMax: room.playersMax,
-          priceFrom: room.priceFrom, themes: room.themes || [],
-          localId: room.localId?._id || room.localId || ''
-        })
-        if (room.coverImageUrl) setPreview(room.coverImageUrl)
-      }).catch(() => setError('Error al cargar la sala'))
+
+        setForm(prev => ({
+          ...prev,
+          localId: room.localId?._id || room.localId || '',
+          title: room.title || '',
+          description: room.description || '',
+          city: room.city || '',
+          themesText: Array.isArray(room.themes) ? room.themes.join(', ') : '',
+          difficulty: room.difficulty || 'easy',
+          durationMin: room.durationMin || 60,
+          playersMin: room.playersMin || 2,
+          playersMax: room.playersMax || 6,
+          priceFrom: room.priceFrom || 60,
+
+          slotDurationMin: room.slotDurationMin || 60,
+          weekSlots: Array.isArray(room.weekSlots) ? room.weekSlots : [],
+          weekendSlots: Array.isArray(room.weekendSlots) ? room.weekendSlots : [],
+        }))
+      } catch {
+        setError('No se pudo cargar la sala para editar')
+      } finally {
+        setLoading(false)
+      }
     }
+
+    loadRoom()
   }, [id, isEdit])
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value })
+  function setField(name, value) {
+    setForm(prev => ({ ...prev, [name]: value }))
   }
 
-  function handleImage(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      setImageBase64(reader.result)
-      setPreview(reader.result)
+  function addWeekSlot() {
+    const slot = normalizeSlot(weekSlotInput)
+    if (!isValidHHmm(slot)) {
+      setError('Hora invalida. Formato esperado: HH:mm')
+      return
     }
-    reader.readAsDataURL(file)
+
+    setError(null)
+    setForm(prev => {
+      if (prev.weekSlots.includes(slot)) return prev
+      const next = [...prev.weekSlots, slot].sort()
+      return { ...prev, weekSlots: next }
+    })
+    setWeekSlotInput('')
   }
 
-  function addTheme() {
-    const t = themeInput.trim()
-    if (!t || form.themes.includes(t)) return
-    setForm({ ...form, themes: [...form.themes, t] })
-    setThemeInput('')
+  function removeWeekSlot(slot) {
+    setForm(prev => ({ ...prev, weekSlots: prev.weekSlots.filter(s => s !== slot) }))
   }
 
-  function removeTheme(t) {
-    setForm({ ...form, themes: form.themes.filter(x => x !== t) })
+  function addWeekendSlot() {
+    const slot = normalizeSlot(weekendSlotInput)
+    if (!isValidHHmm(slot)) {
+      setError('Hora invalida. Formato esperado: HH:mm')
+      return
+    }
+
+    setError(null)
+    setForm(prev => {
+      if (prev.weekendSlots.includes(slot)) return prev
+      const next = [...prev.weekendSlots, slot].sort()
+      return { ...prev, weekendSlots: next }
+    })
+    setWeekendSlotInput('')
+  }
+
+  function removeWeekendSlot(slot) {
+    setForm(prev => ({ ...prev, weekendSlots: prev.weekendSlots.filter(s => s !== slot) }))
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setLoading(true)
+    setSaving(true)
     setError(null)
+
     try {
-      const payload = { ...form }
-      if (imageBase64) payload.coverImageBase64 = imageBase64
+      if (!form.localId) throw new Error('localId es obligatorio')
+      if (!form.title.trim()) throw new Error('El titulo es obligatorio')
+      if (!form.city.trim()) throw new Error('La ciudad es obligatoria')
+      if (Number(form.playersMin) > Number(form.playersMax)) {
+        throw new Error('playersMin no puede ser mayor que playersMax')
+      }
+      if (form.weekSlots.length === 0) throw new Error('Añade al menos un horario entre semana (weekSlots)')
+      if (form.weekendSlots.length === 0) throw new Error('Añade al menos un horario de fin de semana (weekendSlots)')
+
+      const payload = {
+        localId: form.localId,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        city: form.city.trim(),
+        themes,
+        difficulty: form.difficulty,
+        durationMin: Number(form.durationMin),
+        playersMin: Number(form.playersMin),
+        playersMax: Number(form.playersMax),
+        priceFrom: Number(form.priceFrom),
+
+        slotDurationMin: Number(form.slotDurationMin),
+        weekSlots: form.weekSlots,
+        weekendSlots: form.weekendSlots,
+      }
 
       if (isEdit) {
         await updateRoom(id, payload)
       } else {
         await createRoom(payload)
       }
-      navigate('/owner/salas')
+
+      navigate('/owner/rooms')
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar')
+      const msg = err?.response?.data?.message || err?.message || 'No se pudo guardar la sala'
+      setError(msg)
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
+  if (loading) return <div className="container py-4">Cargando...</div>
+
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="fw-bold">{isEdit ? '✏ Editar sala' : '+ Nueva sala'}</h2>
-        <Link to="/owner/salas" className="btn btn-outline-secondary btn-sm">← Volver</Link>
-      </div>
+    <div className="container py-4">
+      <h1 className="mb-3">{isEdit ? 'Editar sala' : 'Crear sala'}</h1>
 
       {error && <div className="alert alert-danger">{error}</div>}
 
       <form onSubmit={handleSubmit}>
-        <div className="row g-4">
-          {/* Local */}
-          <div className="col-12">
-            <div className="card p-3">
-              <h5>Local / Venue</h5>
-              <select name="localId" className="form-select" required value={form.localId} onChange={handleChange}>
-                <option value="">-- Selecciona un local --</option>
-                {locales.map(l => <option key={l._id} value={l._id}>{l.name} ({l.city})</option>)}
-              </select>
-              <small className="text-muted mt-1 d-block">
-                Si no tienes locales todavía, <Link to="/owner/salas">créalos desde el panel</Link>.
-              </small>
+        <div className="row g-3">
+          <div className="col-md-6">
+            <label className="form-label">localId</label>
+            <input
+              className="form-control"
+              value={form.localId}
+              onChange={(e) => setField('localId', e.target.value)}
+              placeholder="ID del local"
+              required
+            />
+            <div className="form-text">
+              De momento es un id manual. Mas adelante lo conectamos a /locales/mine.
             </div>
           </div>
 
-          {/* Info */}
+          <div className="col-md-6">
+            <label className="form-label">Ciudad</label>
+            <input
+              className="form-control"
+              value={form.city}
+              onChange={(e) => setField('city', e.target.value)}
+              required
+            />
+          </div>
+
           <div className="col-12">
-            <div className="card p-3">
-              <h5 className="mb-3">Información</h5>
-              <div className="mb-3">
-                <label className="form-label">Título *</label>
-                <input type="text" name="title" className="form-control" required value={form.title} onChange={handleChange} />
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Descripción *</label>
-                <textarea name="description" className="form-control" rows={3} required value={form.description} onChange={handleChange} />
-              </div>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label">Ciudad *</label>
-                  <input type="text" name="city" className="form-control" required value={form.city} onChange={handleChange} />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Dificultad *</label>
-                  <select name="difficulty" className="form-select" value={form.difficulty} onChange={handleChange}>
-                    <option value="easy">Fácil</option>
-                    <option value="medium">Media</option>
-                    <option value="hard">Difícil</option>
-                  </select>
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Duración (min)</label>
-                  <input type="number" name="durationMin" className="form-control" min={15} value={form.durationMin} onChange={handleChange} />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Precio desde (€)</label>
-                  <input type="number" name="priceFrom" className="form-control" min={0} step={0.5} value={form.priceFrom} onChange={handleChange} />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Jugadores mín</label>
-                  <input type="number" name="playersMin" className="form-control" min={1} value={form.playersMin} onChange={handleChange} />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Jugadores máx</label>
-                  <input type="number" name="playersMax" className="form-control" min={1} value={form.playersMax} onChange={handleChange} />
-                </div>
-              </div>
+            <label className="form-label">Titulo</label>
+            <input
+              className="form-control"
+              value={form.title}
+              onChange={(e) => setField('title', e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="col-12">
+            <label className="form-label">Descripcion</label>
+            <textarea
+              className="form-control"
+              rows={4}
+              value={form.description}
+              onChange={(e) => setField('description', e.target.value)}
+            />
+          </div>
+
+          <div className="col-md-4">
+            <label className="form-label">Dificultad</label>
+            <select
+              className="form-select"
+              value={form.difficulty}
+              onChange={(e) => setField('difficulty', e.target.value)}
+            >
+              <option value="easy">easy</option>
+              <option value="medium">medium</option>
+              <option value="hard">hard</option>
+            </select>
+          </div>
+
+          <div className="col-md-4">
+            <label className="form-label">Duracion (min)</label>
+            <input
+              type="number"
+              className="form-control"
+              min={15}
+              value={form.durationMin}
+              onChange={(e) => setField('durationMin', e.target.value)}
+            />
+          </div>
+
+          <div className="col-md-4">
+            <label className="form-label">Precio desde (EUR)</label>
+            <input
+              type="number"
+              className="form-control"
+              min={0}
+              value={form.priceFrom}
+              onChange={(e) => setField('priceFrom', e.target.value)}
+            />
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label">Jugadores min</label>
+            <input
+              type="number"
+              className="form-control"
+              min={1}
+              value={form.playersMin}
+              onChange={(e) => setField('playersMin', e.target.value)}
+            />
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label">Jugadores max</label>
+            <input
+              type="number"
+              className="form-control"
+              min={1}
+              value={form.playersMax}
+              onChange={(e) => setField('playersMax', e.target.value)}
+            />
+          </div>
+
+          <div className="col-12">
+            <label className="form-label">Tematicas (separadas por comas)</label>
+            <input
+              className="form-control"
+              value={form.themesText}
+              onChange={(e) => setField('themesText', e.target.value)}
+              placeholder="misterio, terror, aventura"
+            />
+          </div>
+
+          <div className="col-12">
+            <hr />
+            <h3 className="mb-2">Horarios</h3>
+            <div className="form-text mb-3">
+              Estos campos son necesarios para que el endpoint /rooms/:id/availability funcione correctamente.
             </div>
           </div>
 
-          {/* Temáticas */}
-          <div className="col-12">
-            <div className="card p-3">
-              <h5>Temáticas</h5>
-              <div className="d-flex gap-2 mb-2">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="ej. Terror, Aventura..."
-                  value={themeInput}
-                  onChange={e => setThemeInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTheme() } }}
-                />
-                <button type="button" className="btn btn-outline-secondary" onClick={addTheme}>Añadir</button>
-              </div>
-              <div className="d-flex gap-2 flex-wrap">
-                {form.themes.map(t => (
-                  <span key={t} className="badge bg-light text-dark border d-flex align-items-center gap-1">
-                    {t}
-                    <button type="button" className="btn-close btn-close-sm" style={{ fontSize: '0.5rem' }} onClick={() => removeTheme(t)} />
-                  </span>
-                ))}
-              </div>
-            </div>
+          <div className="col-md-4">
+            <label className="form-label">Duracion slot (min)</label>
+            <input
+              type="number"
+              className="form-control"
+              min={15}
+              value={form.slotDurationMin}
+              onChange={(e) => setField('slotDurationMin', e.target.value)}
+            />
           </div>
 
-          {/* Imagen */}
-          <div className="col-12">
-            <div className="card p-3">
-              <h5>Imagen de portada</h5>
-              {preview && <img src={preview} className="img-fluid rounded mb-3" style={{ maxHeight: 200, objectFit: 'cover' }} alt="Preview" />}
-              <input type="file" accept="image/*" className="form-control" onChange={handleImage} />
-              {isEdit && <small className="text-muted mt-1 d-block">Sube una imagen nueva para reemplazar la actual</small>}
-            </div>
-          </div>
-
-          {/* Submit */}
-          <div className="col-12">
+          <div className="col-md-8">
+            <label className="form-label">Horarios entre semana (weekSlots)</label>
             <div className="d-flex gap-2">
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear sala'}
+              <input
+                className="form-control"
+                value={weekSlotInput}
+                onChange={(e) => setWeekSlotInput(e.target.value)}
+                placeholder="HH:mm"
+              />
+              <button type="button" className="btn btn-outline-primary" onClick={addWeekSlot}>
+                Añadir
               </button>
-              <Link to="/owner/salas" className="btn btn-outline-secondary">Cancelar</Link>
             </div>
+            <div className="mt-2 d-flex flex-wrap gap-2">
+              {form.weekSlots.map(slot => (
+                <button
+                  type="button"
+                  key={slot}
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={() => removeWeekSlot(slot)}
+                  title="Eliminar"
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="col-md-8">
+            <label className="form-label">Horarios fin de semana (weekendSlots)</label>
+            <div className="d-flex gap-2">
+              <input
+                className="form-control"
+                value={weekendSlotInput}
+                onChange={(e) => setWeekendSlotInput(e.target.value)}
+                placeholder="HH:mm"
+              />
+              <button type="button" className="btn btn-outline-primary" onClick={addWeekendSlot}>
+                Añadir
+              </button>
+            </div>
+            <div className="mt-2 d-flex flex-wrap gap-2">
+              {form.weekendSlots.map(slot => (
+                <button
+                  type="button"
+                  key={slot}
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={() => removeWeekendSlot(slot)}
+                  title="Eliminar"
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="col-12 d-flex gap-2 mt-3">
+            <button className="btn btn-primary" type="submit" disabled={saving}>
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+            <button className="btn btn-outline-secondary" type="button" onClick={() => navigate(-1)} disabled={saving}>
+              Volver
+            </button>
           </div>
         </div>
       </form>
