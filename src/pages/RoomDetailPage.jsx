@@ -37,6 +37,10 @@ function RoomDetailPage() {
   const [bookingError, setBookingError] = useState(null)
   const [bookingDone, setBookingDone] = useState(false)
 
+  const mainImageUrl =
+    room?.coverImageUrl ||
+    (Array.isArray(room?.galleryImageUrls) ? room.galleryImageUrls[0] : null)
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -139,12 +143,18 @@ function RoomDetailPage() {
         {/* Columna principal */}
         <div className="col-lg-8">
           {/* Imagen portada */}
-          {room.coverImageUrl
-            ? <img src={room.coverImageUrl} className="img-fluid rounded mb-4 w-100" style={{ maxHeight: 380, objectFit: 'cover' }} alt={room.title} />
-            : <div className="bg-secondary rounded d-flex align-items-center justify-content-center mb-4" style={{ height: 280 }}>
-                <span className="text-white fs-1">🔐</span>
-              </div>
-          }
+          {mainImageUrl ? (
+            <img
+              src={mainImageUrl}
+              className="img-fluid rounded mb-4 w-100"
+              style={{ maxHeight: 380, objectFit: 'cover' }}
+              alt={room.title}
+            />
+          ) : (
+            <div className="bg-secondary rounded d-flex align-items-center justify-content-center mb-4" style={{ height: 280 }}>
+              <span className="text-white fs-1">🔐</span>
+            </div>
+          )}
 
           {/* Info */}
           <div className="mb-2">

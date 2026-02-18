@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createRoom, getRoomById, updateRoom } from '../services/roomsService'
+import { uploadToCloudinary } from '../services/uploadService'
 
 function isValidHHmm(value) {
-  // 00:00 a 23:59
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value)
 }
 
@@ -23,6 +23,11 @@ function RoomFormPage() {
   const [weekSlotInput, setWeekSlotInput] = useState('')
   const [weekendSlotInput, setWeekendSlotInput] = useState('')
 
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState(null)
+
+
   const [form, setForm] = useState({
     localId: '',
     title: '',
@@ -34,7 +39,8 @@ function RoomFormPage() {
     playersMin: 2,
     playersMax: 6,
     priceFrom: 60,
-
+    coverImageUrl: '',
+    galleryImageUrls: [],
     slotDurationMin: 60,
     weekSlots: [],
     weekendSlots: [],
@@ -131,6 +137,39 @@ function RoomFormPage() {
     setForm(prev => ({ ...prev, weekendSlots: prev.weekendSlots.filter(s => s !== slot) }))
   }
 
+  async function handleUploadImage() {
+  if (!selectedFile) {
+    setUploadError('Selecciona un archivo de imagen primero')
+    return
+  }
+
+  setUploading(true)
+  setUploadError(null)
+
+  try {
+    const url = await uploadToCloudinary(selectedFile)
+
+    setForm(prev => {
+      const nextGallery = Array.isArray(prev.galleryImageUrls)
+        ? [...prev.galleryImageUrls, url]
+        : [url]
+
+      return {
+        ...prev,
+        galleryImageUrls: nextGallery,
+        coverImageUrl: prev.coverImageUrl || url
+      }
+    })
+
+    setSelectedFile(null)
+  } catch (err) {
+    setUploadError(err?.message || 'No se pudo subir la imagen')
+  } finally {
+    setUploading(false)
+  }
+}
+
+
   async function handleSubmit(e) {
     e.preventDefault()
     setSaving(true)
@@ -157,7 +196,8 @@ function RoomFormPage() {
         playersMin: Number(form.playersMin),
         playersMax: Number(form.playersMax),
         priceFrom: Number(form.priceFrom),
-
+        coverImageUrl: form.coverImageUrl || null,
+        galleryImageUrls: form.galleryImageUrls || [],
         slotDurationMin: Number(form.slotDurationMin),
         weekSlots: form.weekSlots,
         weekendSlots: form.weekendSlots,
@@ -239,9 +279,9 @@ function RoomFormPage() {
               value={form.difficulty}
               onChange={(e) => setField('difficulty', e.target.value)}
             >
-              <option value="easy">easy</option>
-              <option value="medium">medium</option>
-              <option value="hard">hard</option>
+              <option value="easy">Fácil</option>
+              <option value="medium">Medio</option>
+              <option value="hard">Difícil</option>
             </select>
           </div>
 
@@ -299,12 +339,64 @@ function RoomFormPage() {
             />
           </div>
 
+          <hr />
+          <h3 className="mb-2">Imágenes</h3>
+
+          <div className="mb-3">
+            <label className="form-label">Portada (coverImageUrl)</label>
+            <input
+              className="form-control"
+              value={form.coverImageUrl || ''}
+              onChange={(e) => setField('coverImageUrl', e.target.value)}
+              placeholder="URL de portada (opcional)"
+            />
+            <div className="form-text">
+              Si está vacío, se usará la primera imagen de la galería como portada.
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Subir imagen a galería</label>
+            <input
+              type="file"
+              accept="image/*"
+              className="form-control"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+            />
+            <div className="d-flex gap-2 mt-2">
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                onClick={handleUploadImage}
+                disabled={uploading || !selectedFile}
+              >
+                {uploading ? 'Subiendo...' : 'Subir imagen'}
+              </button>
+            </div>
+
+            {uploadError && <div className="alert alert-danger mt-2">{uploadError}</div>}
+          </div>
+
+          {Array.isArray(form.galleryImageUrls) && form.galleryImageUrls.length > 0 && (
+            <div className="mb-3">
+              <label className="form-label">Galería</label>
+              <div className="d-flex flex-wrap gap-2">
+                {form.galleryImageUrls.map((url) => (
+                  <img
+                    key={url}
+                    src={url}
+                    alt="gallery"
+                    style={{ width: 90, height: 60, objectFit: 'cover', borderRadius: 6 }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+
           <div className="col-12">
             <hr />
             <h3 className="mb-2">Horarios</h3>
-            <div className="form-text mb-3">
-              Estos campos son necesarios para que el endpoint /rooms/:id/availability funcione correctamente.
-            </div>
           </div>
 
           <div className="col-md-4">

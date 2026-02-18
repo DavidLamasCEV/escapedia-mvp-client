@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { getRooms } from '../services/roomsService'
+import RoomCard from '../components/RoomCard'
 
 function HomePage() {
-  const [rooms, setRooms]     = useState([])
+  const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
+  const [error, setError] = useState(null)
 
   // Filtros
   const [filters, setFilters] = useState({
     city: '', difficulty: '', theme: '', sort: 'new'
   })
-  const [page, setPage]       = useState(1)
+  const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
@@ -46,20 +46,10 @@ function HomePage() {
     setPage(1)
   }
 
-  function difficultyBadge(difficulty) {
-    const map = {
-      easy:   'success',
-      medium: 'warning',
-      hard:   'danger'
-    }
-    const labels = { easy: 'Fácil', medium: 'Media', hard: 'Difícil' }
-    return <span className={`badge bg-${map[difficulty] || 'secondary'}`}>{labels[difficulty] || difficulty}</span>
-  }
-
   return (
     <div>
       <div className="mb-4">
-        <h1 className="fw-bold">🔐 Catálogo de salas</h1>
+        <h1 className="fw-bold">Catalogo de salas</h1>
         <p className="text-muted">Encuentra tu próxima aventura</p>
       </div>
 
@@ -72,7 +62,7 @@ function HomePage() {
                 type="text"
                 name="city"
                 className="form-control"
-                placeholder="🏙 Ciudad..."
+                placeholder="Ciudad..."
                 value={filters.city}
                 onChange={handleFilterChange}
               />
@@ -90,7 +80,7 @@ function HomePage() {
                 type="text"
                 name="theme"
                 className="form-control"
-                placeholder="🎭 Temática..."
+                placeholder="Temática..."
                 value={filters.theme}
                 onChange={handleFilterChange}
               />
@@ -129,7 +119,7 @@ function HomePage() {
       {/* Sin resultados */}
       {!loading && !error && rooms.length === 0 && (
         <div className="empty-state">
-          <p className="fs-4">🔍 No encontramos salas con esos filtros</p>
+          <p className="fs-4">No encontramos salas con esos filtros</p>
           <button className="btn btn-outline-primary" onClick={resetFilters}>Ver todas</button>
         </div>
       )}
@@ -140,32 +130,7 @@ function HomePage() {
           <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
             {rooms.map(room => (
               <div className="col" key={room._id}>
-                <Link to={`/salas/${room._id}`} className="text-decoration-none text-dark">
-                  <div className="card h-100 room-card">
-                    {room.coverImageUrl
-                      ? <img src={room.coverImageUrl} className="card-img-top" alt={room.title} />
-                      : <div className="card-img-top bg-secondary d-flex align-items-center justify-content-center" style={{ height: 180 }}>
-                          <span className="text-white fs-1">🔐</span>
-                        </div>
-                    }
-                    <div className="card-body">
-                      <div className="mb-1">
-                        {room.themes?.slice(0, 2).map(t => (
-                          <span key={t} className="badge bg-light text-dark me-1 border">{t}</span>
-                        ))}
-                      </div>
-                      <h5 className="card-title">{room.title}</h5>
-                      <p className="text-muted small mb-2">📍 {room.city} · ⏱ {room.durationMin} min · 👥 {room.playersMin}–{room.playersMax}</p>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <div>
-                          {difficultyBadge(room.difficulty)}
-                          <span className="ms-2 small text-muted">⭐ {room.ratingAvg?.toFixed(1)} ({room.ratingCount})</span>
-                        </div>
-                        <span className="fw-bold text-primary">desde {room.priceFrom}€</span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
+                <RoomCard room={room} />
               </div>
             ))}
           </div>
