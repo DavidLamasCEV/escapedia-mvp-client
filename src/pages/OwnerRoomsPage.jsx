@@ -60,25 +60,18 @@ function OwnerRoomsPage() {
             <div className="card p-3">
               <div className="d-flex gap-3 align-items-center flex-wrap">
 
-                {room.coverImageUrl ? (
+                {(room.coverImageUrl || room.galleryImageUrls?.[0]) ? (
                   <img
-                    src={room.coverImageUrl}
-                    style={{
-                      width: 80,
-                      height: 60,
-                      objectFit: 'cover',
-                      borderRadius: 6
-                    }}
+                    src={room.coverImageUrl || room.galleryImageUrls?.[0]}
+                    style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }}
                     alt={room.title}
                   />
                 ) : (
-                  <div
-                    className="bg-secondary d-flex align-items-center justify-content-center rounded"
-                    style={{ width: 80, height: 60 }}
-                  >
+                  <div className="bg-secondary d-flex align-items-center justify-content-center rounded" style={{ width: 80, height: 60 }}>
                     <span className="text-white">🔐</span>
                   </div>
                 )}
+
 
                 <div className="flex-grow-1">
                   <h5 className="mb-1">{room.title}</h5>
