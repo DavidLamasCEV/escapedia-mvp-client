@@ -161,6 +161,15 @@ function RoomDetailPage() {
             {room.themes?.map(t => <span key={t} className="badge bg-light text-dark border me-1">{t}</span>)}
           </div>
           <h1 className="fw-bold">{room.title}</h1>
+          {room.localId && (
+            <div className="mb-3 text-muted">
+              <div className="fw-semibold">{room.localId.name}</div>
+              <div className="small">
+                {room.localId.city} · {room.localId.address}
+              </div>
+            </div>
+          )}
+
           <p className="text-muted">
             ⭐ {room.ratingAvg?.toFixed(1)} ({room.ratingCount} valoraciones)
           </p>

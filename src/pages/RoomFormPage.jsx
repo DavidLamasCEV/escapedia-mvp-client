@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createRoom, getRoomById, updateRoom } from '../services/roomsService'
 import { uploadToCloudinary } from '../services/uploadService'
+import { getMyLocales, getAllLocales } from '../services/localesService'
+import { useAuth } from '../contents/authContext'
 
 function isValidHHmm(value) {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value)
@@ -26,6 +28,9 @@ function RoomFormPage() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
+
+  const [locales, setLocales] = useState([])
+  const [localesLoading, setLocalesLoading] = useState(true)
 
 
   const [form, setForm] = useState({
@@ -54,6 +59,29 @@ function RoomFormPage() {
 
     return Array.from(new Set(parts))
   }, [form.themesText])
+
+  const { user } = useAuth()
+
+  useEffect(() => {
+    async function loadLocales() {
+      try {
+        const res = user?.role === 'admin'
+          ? await getAllLocales()
+          : await getMyLocales()
+
+        const myLocales = res.data.locales || []
+        setLocales(myLocales)
+
+        if (!isEdit && myLocales.length === 1) {
+          setForm(prev => ({ ...prev, localId: myLocales[0]._id }))
+        }
+      } finally {
+        setLocalesLoading(false)
+      }
+    }
+
+    loadLocales()
+  }, [user, isEdit])
 
   useEffect(() => {
     if (!isEdit) return
@@ -229,17 +257,39 @@ function RoomFormPage() {
       <form onSubmit={handleSubmit}>
         <div className="row g-3">
           <div className="col-md-6">
-            <label className="form-label">localId</label>
-            <input
-              className="form-control"
-              value={form.localId}
-              onChange={(e) => setField('localId', e.target.value)}
-              placeholder="ID del local"
-              required
-            />
-            <div className="form-text">
-              De momento es un id manual. Mas adelante lo conectamos a /locales/mine.
-            </div>
+            <label className="form-label">Local</label>
+
+            {localesLoading ? (
+              <div className="form-text">Cargando locales...</div>
+            ) : (locales.length === 0 && !isEdit) ? (
+              <div className="alert alert-warning">
+                No tienes locales creados. Crea uno antes de añadir salas.
+              </div>
+            ) : (
+              <select
+                className="form-select"
+                value={form.localId}
+                onChange={(e) => setField('localId', e.target.value)}
+                required
+                disabled={localesLoading || locales.length === 0}
+              >
+                <option value="">Selecciona un local</option>
+
+                {locales.length > 0 ? (
+                  locales.map(local => (
+                    <option key={local._id} value={local._id}>
+                      {local.name} - {local.city}
+                    </option>
+                  ))
+                ) : (
+                  <option value={form.localId}>
+                    Local actual (no editable)
+                  </option>
+                )}
+              </select>
+            )}
+
+
           </div>
 
           <div className="col-md-6">
@@ -343,7 +393,7 @@ function RoomFormPage() {
           <h3 className="mb-2">Imágenes</h3>
 
           <div className="mb-3">
-            <label className="form-label">Portada (coverImageUrl)</label>
+            <label className="form-label">Portada (URL manual opcional)</label>
             <input
               className="form-control"
               value={form.coverImageUrl || ''}
@@ -351,7 +401,7 @@ function RoomFormPage() {
               placeholder="URL de portada (opcional)"
             />
             <div className="form-text">
-              Si está vacío, se usará la primera imagen de la galería como portada.
+              Si está vacío, se usará la primera imagen de la galería.
             </div>
           </div>
 
@@ -363,7 +413,8 @@ function RoomFormPage() {
               className="form-control"
               onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
             />
-            <div className="d-flex gap-2 mt-2">
+
+            <div className="mt-2">
               <button
                 type="button"
                 className="btn btn-outline-primary"
@@ -379,7 +430,7 @@ function RoomFormPage() {
 
           {Array.isArray(form.galleryImageUrls) && form.galleryImageUrls.length > 0 && (
             <div className="mb-3">
-              <label className="form-label">Galería</label>
+              <label className="form-label">Galería actual</label>
               <div className="d-flex flex-wrap gap-2">
                 {form.galleryImageUrls.map((url) => (
                   <img
@@ -392,6 +443,7 @@ function RoomFormPage() {
               </div>
             </div>
           )}
+
 
 
           <div className="col-12">
