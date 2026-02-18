@@ -31,6 +31,12 @@ function OwnerRoomsPage() {
     }
   }
 
+  useEffect(() => {
+    if (rooms.length > 0) console.log('ROOM SAMPLE:', rooms[0])
+  }, [rooms])
+
+
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -53,12 +59,27 @@ function OwnerRoomsPage() {
           <div className="col-12" key={room._id}>
             <div className="card p-3">
               <div className="d-flex gap-3 align-items-center flex-wrap">
-                {room.coverImageUrl
-                  ? <img src={room.coverImageUrl} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} alt={room.title} />
-                  : <div className="bg-secondary d-flex align-items-center justify-content-center rounded" style={{ width: 80, height: 60 }}>
-                      <span className="text-white">🔐</span>
-                    </div>
-                }
+
+                {room.coverImageUrl ? (
+                  <img
+                    src={room.coverImageUrl}
+                    style={{
+                      width: 80,
+                      height: 60,
+                      objectFit: 'cover',
+                      borderRadius: 6
+                    }}
+                    alt={room.title}
+                  />
+                ) : (
+                  <div
+                    className="bg-secondary d-flex align-items-center justify-content-center rounded"
+                    style={{ width: 80, height: 60 }}
+                  >
+                    <span className="text-white">🔐</span>
+                  </div>
+                )}
+
                 <div className="flex-grow-1">
                   <h5 className="mb-1">{room.title}</h5>
                   <p className="text-muted small mb-0">
@@ -66,16 +87,37 @@ function OwnerRoomsPage() {
                     ⭐ {room.ratingAvg?.toFixed(1)} ({room.ratingCount})
                   </p>
                 </div>
+
                 <div className="d-flex gap-2 flex-wrap">
-                  <Link to={`/salas/${room._id}`} className="btn btn-outline-secondary btn-sm" target="_blank">👁 Ver</Link>
-                  <Link to={`/owner/salas/${room._id}/editar`} className="btn btn-outline-primary btn-sm">✏ Editar</Link>
-                  <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(room._id, room.title)}>🗑 Eliminar</button>
+                  <Link
+                    to={`/salas/${room._id}`}
+                    className="btn btn-outline-secondary btn-sm"
+                    target="_blank"
+                  >
+                    👁 Ver
+                  </Link>
+
+                  <Link
+                    to={`/owner/salas/${room._id}/editar`}
+                    className="btn btn-outline-primary btn-sm"
+                  >
+                    ✏ Editar
+                  </Link>
+
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={() => handleDelete(room._id, room.title)}
+                  >
+                    🗑 Eliminar
+                  </button>
                 </div>
+
               </div>
             </div>
           </div>
         ))}
       </div>
+
     </div>
   )
 }

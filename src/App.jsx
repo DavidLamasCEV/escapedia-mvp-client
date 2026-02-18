@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
 
-// Páginas públicas
+// Publicas
 import HomePage           from './pages/HomePage'
 import RoomDetailPage     from './pages/RoomDetailPage'
 import LoginPage          from './pages/LoginPage'
@@ -10,19 +10,24 @@ import RegisterPage       from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage  from './pages/ResetPasswordPage'
 
-// Páginas privadas (usuario)
+// Privadas (usuario)
 import ProfilePage      from './pages/ProfilePage'
 import MyBookingsPage   from './pages/MyBookingsPage'
 import CreateReviewPage from './pages/CreateReviewPage'
 
-// Páginas privadas (owner)
+// Privadas (owner)
 import OwnerRoomsPage    from './pages/OwnerRoomsPage'
 import RoomFormPage      from './pages/RoomFormPage'
 import OwnerBookingsPage from './pages/OwnerBookingsPage'
 
-// Páginas privadas (admin)
+// Admin
 import LocalesAdminPage from './pages/LocalesAdminPage'
 
+// Owner
+import LocalesOwnerPage from './pages/LocalesOwnerPage'
+
+// NUEVO
+import LocalDetailPage from './pages/LocalDetailPage'
 
 function App() {
   return (
@@ -31,11 +36,11 @@ function App() {
 
       <div className="container my-4">
         <Routes>
-          {/* Públicas */}
-          <Route path="/"               element={<HomePage />} />
-          <Route path="/salas/:id"      element={<RoomDetailPage />} />
-          <Route path="/login"          element={<LoginPage />} />
-          <Route path="/register"       element={<RegisterPage />} />
+          {/* Publicas */}
+          <Route path="/"                element={<HomePage />} />
+          <Route path="/salas/:id"       element={<RoomDetailPage />} />
+          <Route path="/login"           element={<LoginPage />} />
+          <Route path="/register"        element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
@@ -63,8 +68,17 @@ function App() {
           <Route path="/owner/reservas" element={
             <ProtectedRoute roles={['owner', 'admin']}><OwnerBookingsPage /></ProtectedRoute>
           } />
+
+          <Route path="/owner/locales" element={
+            <ProtectedRoute roles={['owner', 'admin']}><LocalesOwnerPage /></ProtectedRoute>
+          } />
+
           <Route path="/admin/locales" element={
             <ProtectedRoute roles={['admin']}><LocalesAdminPage /></ProtectedRoute>
+          } />
+
+          <Route path="/locales/:id" element={
+            <ProtectedRoute roles={['owner', 'admin']}><LocalDetailPage /></ProtectedRoute>
           } />
         </Routes>
       </div>
