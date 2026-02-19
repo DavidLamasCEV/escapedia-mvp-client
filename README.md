@@ -18,11 +18,9 @@ reservar y valorar Escape Rooms.
 
 📺 **Vídeo demostrativo completo:**
 
-[![Demo Escapedia](https://img.youtube.com/vi/ID_VIDEO/0.jpg)](https://www.youtube.com/watch?v=ID_VIDEO)
+### --- PRÓXIMAMENTE ---
 
 ---
-
-
 
 ## 🖥️ Capturas de pantalla
 
