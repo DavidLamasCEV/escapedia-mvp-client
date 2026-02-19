@@ -1,16 +1,201 @@
-# React + Vite
+# 🎭 Escapedia MVP -- Frontend (Client)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> Proyecto académico desarrollado para el ejercicio **Full-Stack Product
+> MVP (DAM 2º)**
 
-Currently, two official plugins are available:
+Este repositorio contiene el **Frontend en React** del proyecto
+Escapedia, la interfaz web que consume la API REST para explorar,
+reservar y valorar Escape Rooms.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-Frontend-purple.svg)](https://vitejs.dev/)
+[![Axios](https://img.shields.io/badge/Axios-HTTP-orange.svg)](https://axios-http.com/)
+[![JWT](https://img.shields.io/badge/JWT-Auth-red.svg)](https://jwt.io/)
 
-## React Compiler
+------------------------------------------------------------------------
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 📋 Tabla de contenidos
 
-## Expanding the ESLint configuration
+-   [Objetivo académico](#1-objetivo-académico)
+-   [Stack tecnológico](#2-stack-tecnológico)
+-   [Arquitectura del proyecto](#3-arquitectura-del-proyecto)
+-   [Sistema de autenticación](#4-sistema-de-autenticación)
+-   [Roles y control de acceso](#5-roles-y-control-de-acceso)
+-   [Catálogo y filtros](#6-catálogo-y-filtros)
+-   [Workflow de reservas](#7-workflow-de-reservas)
+-   [Gestión de imágenes](#8-gestión-de-imágenes)
+-   [Integración con la API](#9-integración-con-la-api)
+-   [Variables de entorno](#10-variables-de-entorno)
+-   [Instalación](#11-instalación)
+-   [Testing funcional](#12-testing-funcional)
+-   [Conclusión](#13-conclusión-académica)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+------------------------------------------------------------------------
+
+## 1. Objetivo académico
+
+Este frontend ha sido diseñado para complementar la API y cumplir los
+requisitos del ejercicio:
+
+-   API SPA desarrollada en React
+-   Consumo de API REST con Axios
+-   Autenticación JWT persistente
+-   Protección de rutas según rol
+-   Formularios completos de creación y edición
+-   Subida de imágenes a través del backend
+-   Gestión completa de reservas y reviews
+-   Filtros dinámicos y paginación
+-   UX coherente con el modelo de negocio
+
+------------------------------------------------------------------------
+
+## 2. Stack tecnológico
+
+  Componente     Tecnología
+  -------------- -----------------
+  Framework      React 18
+  Bundler        Vite
+  Routing        React Router v6
+  Cliente HTTP   Axios
+  Gestión Auth   Context API
+  Estilos        CSS + Bootstrap
+
+------------------------------------------------------------------------
+
+## 3. Arquitectura del proyecto
+
+    client/
+     ├── src/
+     │   ├── pages/
+     │   ├── components/
+     │   ├── services/
+     │   ├── context/
+     │   ├── App.jsx
+     │   └── main.jsx
+
+------------------------------------------------------------------------
+
+## 4. Sistema de autenticación
+
+-   Token almacenado en localStorage
+-   Axios interceptor que añade Authorization: Bearer
+-   Context global AuthContext
+-   Persistencia de sesión tras refresco
+
+### Recuperación de contraseña
+
+-   Formulario /forgot-password
+-   Email con token
+-   Redirección a /reset-password?token=...
+-   Cambio de contraseña validado por backend
+
+------------------------------------------------------------------------
+
+## 5. Roles y control de acceso
+
+  Rol     Acceso
+  ------- ----------------------------
+  user    Reservas y reviews
+  owner   Gestión de locales y salas
+  admin   Acceso completo
+
+Rutas privadas protegidas mediante validación de rol y autenticación.
+
+------------------------------------------------------------------------
+
+## 6. Catálogo y filtros
+
+Implementado en HomePage:
+
+-   Paginación
+-   Filtro por ciudad (select dinámico)
+-   Filtro por dificultad
+-   Filtro por tema
+-   Filtro por precio
+-   Ordenación múltiple
+
+Sincronizado con parámetros de query del backend.
+
+------------------------------------------------------------------------
+
+## 7. Workflow de reservas
+
+    Usuario crea reserva → pending
+    Owner confirma → confirmed
+    Owner completa → completed
+    Usuario crea review
+
+UI adaptada al estado de la reserva.
+
+------------------------------------------------------------------------
+
+## 8. Gestión de imágenes
+
+-   Conversión a base64 en cliente
+-   Envío al backend
+-   Cloudinary gestionado desde API
+-   Replace y delete real en locales
+-   Galería dinámica en salas
+
+------------------------------------------------------------------------
+
+## 9. Integración con la API
+
+Endpoints principales consumidos:
+
+-   /auth/\*
+-   /rooms
+-   /locales
+-   /bookings
+-   /reviews
+
+Configuración centralizada en Axios con baseURL configurable.
+
+------------------------------------------------------------------------
+
+## 10. Variables de entorno
+
+Crear archivo `.env`:
+
+    VITE_API_URL=http://localhost:3000
+
+------------------------------------------------------------------------
+
+## 11. Instalación
+
+``` bash
+git clone https://github.com/DavidLamasCEV/escapedia-mvp-client.git
+cd escapedia-mvp-client
+npm install
+npm run dev
+```
+
+Aplicación disponible en:
+
+    http://localhost:5173
+
+------------------------------------------------------------------------
+
+## 12. Testing funcional
+
+-   Registro y login
+-   Persistencia de sesión
+-   Reset de contraseña
+-   Creación y edición de salas
+-   Subida de imágenes
+-   Flujo completo de reservas
+-   Reviews condicionadas
+-   Protección por roles
+-   Filtros y paginación
+
+------------------------------------------------------------------------
+
+## 13. Conclusión académica
+
+El frontend se encuentra completamente alineado con el backend y cumple
+los requisitos del ejercicio Full-Stack Product MVP.
+
+------------------------------------------------------------------------
+
+**Autor:** DavidLamasCEV\
+**Última actualización:** Febrero 2026
