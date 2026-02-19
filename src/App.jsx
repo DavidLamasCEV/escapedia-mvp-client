@@ -10,24 +10,22 @@ import RegisterPage       from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage  from './pages/ResetPasswordPage'
 
-// Privadas (usuario)
+// Locales publicos
+import LocalesCatalogPage    from './pages/LocalesCatalogPage'
+import LocalPublicDetailPage from './pages/LocalPublicDetailPage'
+
+// Privadas usuario
 import ProfilePage      from './pages/ProfilePage'
 import MyBookingsPage   from './pages/MyBookingsPage'
 import CreateReviewPage from './pages/CreateReviewPage'
 
-// Privadas (owner)
+// Privadas owner
 import OwnerRoomsPage    from './pages/OwnerRoomsPage'
 import RoomFormPage      from './pages/RoomFormPage'
 import OwnerBookingsPage from './pages/OwnerBookingsPage'
 
-// Admin
+// Privadas admin
 import LocalesAdminPage from './pages/LocalesAdminPage'
-
-// Owner
-import LocalesOwnerPage from './pages/LocalesOwnerPage'
-
-// NUEVO
-import LocalDetailPage from './pages/LocalDetailPage'
 
 function App() {
   return (
@@ -37,14 +35,18 @@ function App() {
       <div className="container my-4">
         <Routes>
           {/* Publicas */}
-          <Route path="/"                element={<HomePage />} />
-          <Route path="/salas/:id"       element={<RoomDetailPage />} />
-          <Route path="/login"           element={<LoginPage />} />
-          <Route path="/register"        element={<RegisterPage />} />
+          <Route path="/"               element={<HomePage />} />
+          <Route path="/salas/:id"      element={<RoomDetailPage />} />
+
+          <Route path="/locales"        element={<LocalesCatalogPage />} />
+          <Route path="/locales/:id"    element={<LocalPublicDetailPage />} />
+
+          <Route path="/login"          element={<LoginPage />} />
+          <Route path="/register"       element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
-          {/* Privadas: cualquier usuario autenticado */}
+          {/* Privadas */}
           <Route path="/perfil" element={
             <ProtectedRoute><ProfilePage /></ProtectedRoute>
           } />
@@ -55,7 +57,6 @@ function App() {
             <ProtectedRoute><CreateReviewPage /></ProtectedRoute>
           } />
 
-          {/* Privadas: solo owner o admin */}
           <Route path="/owner/salas" element={
             <ProtectedRoute roles={['owner', 'admin']}><OwnerRoomsPage /></ProtectedRoute>
           } />
@@ -69,16 +70,8 @@ function App() {
             <ProtectedRoute roles={['owner', 'admin']}><OwnerBookingsPage /></ProtectedRoute>
           } />
 
-          <Route path="/owner/locales" element={
-            <ProtectedRoute roles={['owner', 'admin']}><LocalesOwnerPage /></ProtectedRoute>
-          } />
-
           <Route path="/admin/locales" element={
             <ProtectedRoute roles={['admin']}><LocalesAdminPage /></ProtectedRoute>
-          } />
-
-          <Route path="/locales/:id" element={
-            <ProtectedRoute roles={['owner', 'admin']}><LocalDetailPage /></ProtectedRoute>
           } />
         </Routes>
       </div>

@@ -49,7 +49,7 @@ function HomePage() {
   return (
     <div>
       <div className="mb-4">
-        <h1 className="fw-bold">Catalogo de salas</h1>
+        <h1 className="fw-bold">Catálogo de salas</h1>
         <p className="text-muted">Encuentra tu próxima aventura</p>
       </div>
 

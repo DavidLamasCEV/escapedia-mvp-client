@@ -13,10 +13,8 @@ function Navbar() {
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
       <div className="container">
-        {/* Logo */}
         <Link className="navbar-brand" to="/">🔐 Escapedia</Link>
 
-        {/* Botón hamburguesa para móvil */}
         <button
           className="navbar-toggler"
           type="button"
@@ -27,55 +25,55 @@ function Navbar() {
         </button>
 
         <div className="collapse navbar-collapse" id="navMenu">
-          {/* Links izquierda */}
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
             <li className="nav-item">
-              <NavLink className="nav-link" to="/" end>Catálogo</NavLink>
+              <NavLink className="nav-link" to="/" end>🚪 Salas</NavLink>
             </li>
 
-            {/* Solo usuarios autenticados */}
+            <li className="nav-item">
+              <NavLink className="nav-link" to="/locales">🏢 Locales</NavLink>
+            </li>
+
             {user && (
               <li className="nav-item">
-                <NavLink className="nav-link" to="/mis-reservas">Mis reservas</NavLink>
+                <NavLink className="nav-link" to="/mis-reservas">📖 Mis reservas</NavLink>
               </li>
             )}
 
-            {/* Solo owner/admin */}
             {user && (user.role === 'owner' || user.role === 'admin') && (
               <>
                 <li className="nav-item">
-                  <NavLink className="nav-link" to="/owner/salas">Mis salas</NavLink>
+                  <NavLink className="nav-link" to="/owner/salas">✅ Mis salas</NavLink>
                 </li>
                 <li className="nav-item">
-                  <NavLink className="nav-link" to="/owner/reservas">Reservas recibidas</NavLink>
+                  <NavLink className="nav-link" to="/owner/reservas">🔔 Reservas recibidas</NavLink>
                 </li>
               </>
             )}
 
             {user && user.role === 'admin' && (
-            <li className="nav-item">
-                <NavLink className="nav-link" to="/admin/locales">🏢 Locales</NavLink>
-            </li>
+              <li className="nav-item">
+                <NavLink className="nav-link" to="/admin/locales">🗄️ Admin locales</NavLink>
+              </li>
             )}
           </ul>
 
-          {/* Links derecha */}
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0">
             {user ? (
               <>
                 <li className="nav-item">
-                  <NavLink className="nav-link" to="/perfil">👤 {user.name}</NavLink>
+                  <NavLink className="nav-link" to="/perfil">{user.name}</NavLink>
                 </li>
                 <li className="nav-item">
                   <button className="btn btn-outline-light btn-sm ms-2" onClick={handleLogout}>
-                    Cerrar sesión
+                    Cerrar sesion
                   </button>
                 </li>
               </>
             ) : (
               <>
                 <li className="nav-item">
-                  <NavLink className="nav-link" to="/login">Iniciar sesión</NavLink>
+                  <NavLink className="nav-link" to="/login">Iniciar sesion</NavLink>
                 </li>
                 <li className="nav-item">
                   <NavLink className="nav-link" to="/register">Registrarse</NavLink>

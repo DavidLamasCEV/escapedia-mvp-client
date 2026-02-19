@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { createRoom, getRoomById, updateRoom } from '../services/roomsService'
-import { uploadToCloudinary } from '../services/uploadService'
+import { createRoom, getRoomById, updateRoom, addRoomImage } from '../services/roomsService'
 import { getMyLocales, getAllLocales } from '../services/localesService'
 import { useAuth } from '../contents/authContext'
 
@@ -11,6 +10,16 @@ function isValidHHmm(value) {
 
 function normalizeSlot(value) {
   return value.trim()
+}
+
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo'))
+    reader.readAsDataURL(file)
+  })
 }
 
 function RoomFormPage() {
@@ -31,7 +40,6 @@ function RoomFormPage() {
 
   const [locales, setLocales] = useState([])
   const [localesLoading, setLocalesLoading] = useState(true)
-
 
   const [form, setForm] = useState({
     localId: '',
@@ -107,6 +115,9 @@ function RoomFormPage() {
           playersMax: room.playersMax || 6,
           priceFrom: room.priceFrom || 60,
 
+          coverImageUrl: room.coverImageUrl || '',
+          galleryImageUrls: Array.isArray(room.galleryImageUrls) ? room.galleryImageUrls : [],
+
           slotDurationMin: room.slotDurationMin || 60,
           weekSlots: Array.isArray(room.weekSlots) ? room.weekSlots : [],
           weekendSlots: Array.isArray(room.weekendSlots) ? room.weekendSlots : [],
@@ -166,37 +177,47 @@ function RoomFormPage() {
   }
 
   async function handleUploadImage() {
-  if (!selectedFile) {
-    setUploadError('Selecciona un archivo de imagen primero')
-    return
+    if (!selectedFile) {
+      setUploadError('Selecciona un archivo de imagen primero')
+      return
+    }
+
+    if (!isEdit) {
+      setUploadError('Primero guarda la sala. Luego editala para subir imagenes.')
+      return
+    }
+
+    setUploading(true)
+    setUploadError(null)
+
+    try {
+      // Convertimos el File a base64 (dataUrl) y lo enviamos a la API
+      const imageBase64 = await fileToDataUrl(selectedFile)
+      const resp = await addRoomImage(id, imageBase64)
+
+      const url = resp?.data?.imageUrl
+      if (!url) throw new Error('La API no devolvio imageUrl')
+
+      setForm(prev => {
+        const nextGallery = Array.isArray(prev.galleryImageUrls)
+          ? [...prev.galleryImageUrls, url]
+          : [url]
+
+        return {
+          ...prev,
+          galleryImageUrls: nextGallery,
+          coverImageUrl: prev.coverImageUrl || url
+        }
+      })
+
+      setSelectedFile(null)
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'No se pudo subir la imagen'
+      setUploadError(msg)
+    } finally {
+      setUploading(false)
+    }
   }
-
-  setUploading(true)
-  setUploadError(null)
-
-  try {
-    const url = await uploadToCloudinary(selectedFile)
-
-    setForm(prev => {
-      const nextGallery = Array.isArray(prev.galleryImageUrls)
-        ? [...prev.galleryImageUrls, url]
-        : [url]
-
-      return {
-        ...prev,
-        galleryImageUrls: nextGallery,
-        coverImageUrl: prev.coverImageUrl || url
-      }
-    })
-
-    setSelectedFile(null)
-  } catch (err) {
-    setUploadError(err?.message || 'No se pudo subir la imagen')
-  } finally {
-    setUploading(false)
-  }
-}
-
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -237,7 +258,7 @@ function RoomFormPage() {
         await createRoom(payload)
       }
 
-      navigate('/owner/rooms')
+      navigate('/owner/salas')
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'No se pudo guardar la sala'
       setError(msg)
@@ -288,8 +309,6 @@ function RoomFormPage() {
                 )}
               </select>
             )}
-
-
           </div>
 
           <div className="col-md-6">
@@ -394,6 +413,27 @@ function RoomFormPage() {
 
           <div className="mb-3">
             <label className="form-label">Portada (URL manual opcional)</label>
+
+            {(form.coverImageUrl || form.galleryImageUrls?.[0]) && (
+              <div className="mb-3">
+                <label className="form-label">Vista previa de portada</label>
+                <div>
+                  <img
+                    src={form.coverImageUrl || form.galleryImageUrls[0]}
+                    alt="preview"
+                    style={{
+                      width: '100%',
+                      maxWidth: 420,
+                      height: 220,
+                      objectFit: 'cover',
+                      borderRadius: 8
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+
             <input
               className="form-control"
               value={form.coverImageUrl || ''}
@@ -444,86 +484,117 @@ function RoomFormPage() {
             </div>
           )}
 
+            <div className="col-12">
+              <hr />
+              <h3 className="mb-2">Horarios</h3>
+              <p className="text-muted small mb-0">
+                Añade los horarios en formato reloj. Puedes repetir el proceso para entre semana y fin de semana.
+              </p>
+            </div>
 
-
-          <div className="col-12">
-            <hr />
-            <h3 className="mb-2">Horarios</h3>
-          </div>
-
-          <div className="col-md-4">
-            <label className="form-label">Duracion slot (min)</label>
-            <input
-              type="number"
-              className="form-control"
-              min={15}
-              value={form.slotDurationMin}
-              onChange={(e) => setField('slotDurationMin', e.target.value)}
-            />
-          </div>
-
-          <div className="col-md-8">
-            <label className="form-label">Horarios entre semana (weekSlots)</label>
-            <div className="d-flex gap-2">
+            <div className="col-md-4">
+              <label className="form-label">Duracion slot (min)</label>
               <input
+                type="number"
                 className="form-control"
-                value={weekSlotInput}
-                onChange={(e) => setWeekSlotInput(e.target.value)}
-                placeholder="HH:mm"
+                min={15}
+                value={form.slotDurationMin}
+                onChange={(e) => setField('slotDurationMin', e.target.value)}
               />
-              <button type="button" className="btn btn-outline-primary" onClick={addWeekSlot}>
-                Añadir
-              </button>
             </div>
-            <div className="mt-2 d-flex flex-wrap gap-2">
-              {form.weekSlots.map(slot => (
-                <button
-                  type="button"
-                  key={slot}
-                  className="btn btn-sm btn-outline-secondary"
-                  onClick={() => removeWeekSlot(slot)}
-                  title="Eliminar"
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          <div className="col-md-8">
-            <label className="form-label">Horarios fin de semana (weekendSlots)</label>
-            <div className="d-flex gap-2">
-              <input
-                className="form-control"
-                value={weekendSlotInput}
-                onChange={(e) => setWeekendSlotInput(e.target.value)}
-                placeholder="HH:mm"
-              />
-              <button type="button" className="btn btn-outline-primary" onClick={addWeekendSlot}>
-                Añadir
-              </button>
-            </div>
-            <div className="mt-2 d-flex flex-wrap gap-2">
-              {form.weekendSlots.map(slot => (
-                <button
-                  type="button"
-                  key={slot}
-                  className="btn btn-sm btn-outline-secondary"
-                  onClick={() => removeWeekendSlot(slot)}
-                  title="Eliminar"
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
-          </div>
+            <div className="col-12" />
 
-          <div className="col-12 d-flex gap-2 mt-3">
-            <button className="btn btn-primary" type="submit" disabled={saving}>
+            <div className="col-md-6">
+              <div className="card p-3">
+                <h5 className="mb-2">Entre semana</h5>
+
+                <div className="d-flex gap-2">
+                  <input
+                    type="time"
+                    className="form-control"
+                    value={weekSlotInput}
+                    onChange={(e) => setWeekSlotInput(e.target.value)}
+                  />
+                  <button type="button" className="btn btn-outline-primary" onClick={addWeekSlot}>
+                    Añadir
+                  </button>
+                </div>
+
+                <div className="mt-3 d-flex flex-wrap gap-2">
+                  {form.weekSlots.length === 0 && (
+                    <div className="text-muted small">No hay horarios añadidos.</div>
+                  )}
+
+                  {form.weekSlots.map(slot => (
+                    <div
+                      key={slot}
+                      className="badge bg-light text-dark border d-flex align-items-center gap-2"
+                      style={{ padding: '8px 10px', borderRadius: 999 }}
+                    >
+                      <span>{slot}</span>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary"
+                        style={{ padding: '0 8px', lineHeight: '18px' }}
+                        onClick={() => removeWeekSlot(slot)}
+                        title="Eliminar"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="col-md-6">
+              <div className="card p-3">
+                <h5 className="mb-2">Fin de semana</h5>
+
+                <div className="d-flex gap-2">
+                  <input
+                    type="time"
+                    className="form-control"
+                    value={weekendSlotInput}
+                    onChange={(e) => setWeekendSlotInput(e.target.value)}
+                  />
+                  <button type="button" className="btn btn-outline-primary" onClick={addWeekendSlot}>
+                    Añadir
+                  </button>
+                </div>
+
+                <div className="mt-3 d-flex flex-wrap gap-2">
+                  {form.weekendSlots.length === 0 && (
+                    <div className="text-muted small">No hay horarios añadidos.</div>
+                  )}
+
+                  {form.weekendSlots.map(slot => (
+                    <div
+                      key={slot}
+                      className="badge bg-light text-dark border d-flex align-items-center gap-2"
+                      style={{ padding: '8px 10px', borderRadius: 999 }}
+                    >
+                      <span>{slot}</span>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary"
+                        style={{ padding: '0 8px', lineHeight: '18px' }}
+                        onClick={() => removeWeekendSlot(slot)}
+                        title="Eliminar"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+
+          <div className="col-12 mt-3">
+            <button className="btn btn-primary" disabled={saving}>
               {saving ? 'Guardando...' : 'Guardar'}
-            </button>
-            <button className="btn btn-outline-secondary" type="button" onClick={() => navigate(-1)} disabled={saving}>
-              Volver
             </button>
           </div>
         </div>

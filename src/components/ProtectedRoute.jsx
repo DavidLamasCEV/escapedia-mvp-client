@@ -1,12 +1,10 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contents/authContext'
 
-// Protege rutas privadas.
-// roles: array opcional, ej ['owner', 'admin']
+
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth()
 
-  // Mientras carga la sesión inicial, no renderizamos nada
   if (loading) {
     return (
       <div className="spinner-wrap">

@@ -195,7 +195,7 @@ function RoomDetailPage() {
           {/* Reviews */}
           <h4 className="mt-4 mb-3">Valoraciones</h4>
           {reviews.length === 0
-            ? <p className="text-muted">Todavía no hay valoraciones. Sé el primero.</p>
+            ? <p className="text-muted">Todavía no hay valoraciones. ¡Completa la sala y sé el primero!.</p>
             : reviews.map(r => (
                 <div key={r._id} className="card mb-2 p-3">
                   <div className="d-flex justify-content-between">
@@ -216,7 +216,7 @@ function RoomDetailPage() {
 
               {bookingDone ? (
                 <div>
-                  <div className="alert alert-success">Reserva enviada. El owner la confirmará pronto.</div>
+                  <div className="alert alert-success">¡Reserva enviada!. En un plazo de 24/48 horas recibirás la confirmación por email.</div>
                   <Link to="/mis-reservas" className="btn btn-outline-primary w-100">Ver mis reservas</Link>
                 </div>
               ) : (
@@ -271,7 +271,10 @@ function RoomDetailPage() {
                     )}
 
                     <div className="text-muted small mt-2">
-                      Si un horario indica "requiere llamada", no se puede reservar online.
+                      Las reservas deben hacerse con al menos 12 horas de antelación.
+                    </div>
+                    <div className="text-muted small mt-2">
+                      Si una reserva "Requiere llamada", contacta directamente con el local para reservar por teléfono.
                     </div>
                   </div>
 

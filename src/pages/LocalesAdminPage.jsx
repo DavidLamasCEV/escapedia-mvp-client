@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react'
-import { createLocal, getMyLocales, getAllLocales, updateLocal, deleteLocal } from '../services/localesService'
+import {
+  createLocal,
+  getMyLocales,
+  getAllLocales,
+  updateLocal,
+  deleteLocal,
+  uploadLocalCover,
+  deleteLocalCover
+} from '../services/localesService'
 import { getOwners } from '../services/usersService'
 import { useAuth } from '../contents/authContext'
 import { Link } from 'react-router-dom'
@@ -15,6 +23,7 @@ function LocalesAdminPage() {
 
   // Formulario crear
   const [form, setForm] = useState(EMPTY)
+  const [formCoverFile, setFormCoverFile] = useState(null)
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState(null)
   const [formSuccess, setFormSuccess] = useState(false)
@@ -27,6 +36,7 @@ function LocalesAdminPage() {
   // Edicion inline
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({ name: '', city: '', address: '', phone: '', email: '', ownerId: '' })
+  const [editCoverFile, setEditCoverFile] = useState(null)
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState(null)
 
@@ -60,14 +70,32 @@ function LocalesAdminPage() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  function handleCreateCoverChange(e) {
+    const file = e.target.files?.[0] || null
+    setFormCoverFile(file)
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setFormLoading(true)
     setFormError(null)
     setFormSuccess(false)
+
     try {
-      await createLocal(form)
+      // 1) Crear el local (datos de texto)
+      const res = await createLocal(form)
+
+      // Intentamos sacar el _id sin depender de un único shape
+      const created = res.data?.local || res.data?.locale || res.data
+      const newId = created?._id
+
+      // 2) Si hay imagen, subirla al endpoint de cover
+      if (newId && formCoverFile) {
+        await uploadLocalCover(newId, formCoverFile)
+      }
+
       setForm(EMPTY)
+      setFormCoverFile(null)
       setFormSuccess(true)
       setShowForm(false)
       fetchLocales()
@@ -81,6 +109,7 @@ function LocalesAdminPage() {
   function startEdit(local) {
     setEditError(null)
     setEditingId(local._id)
+    setEditCoverFile(null)
 
     const ownerId = local.ownerId?._id ? local.ownerId._id : (local.ownerId || '')
 
@@ -98,19 +127,34 @@ function LocalesAdminPage() {
     setEditingId(null)
     setEditError(null)
     setEditLoading(false)
+    setEditCoverFile(null)
   }
 
   function handleEditChange(e) {
     setEditForm({ ...editForm, [e.target.name]: e.target.value })
   }
 
+  function handleEditCoverChange(e) {
+    const file = e.target.files?.[0] || null
+    setEditCoverFile(file)
+  }
+
   async function submitEdit(e) {
     e.preventDefault()
     setEditLoading(true)
     setEditError(null)
+
     try {
+      // 1) Actualizar campos de texto
       await updateLocal(editingId, editForm)
+
+      // 2) Si se ha seleccionado una imagen, subir cover
+      if (editCoverFile) {
+        await uploadLocalCover(editingId, editCoverFile)
+      }
+
       setEditingId(null)
+      setEditCoverFile(null)
       fetchLocales()
     } catch (err) {
       setEditError(err.response?.data?.message || 'Error al actualizar el local')
@@ -129,6 +173,27 @@ function LocalesAdminPage() {
     } catch (err) {
       alert(err.response?.data?.message || 'Error al eliminar el local')
     }
+  }
+
+  async function handleDeleteCover(id) {
+    const ok = window.confirm('Vas a quitar la imagen de portada de este local. Continuar?')
+    if (!ok) return
+
+    try {
+      await deleteLocalCover(id)
+      fetchLocales()
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error al quitar la portada')
+    }
+  }
+
+  function getLocalCover(local) {
+    // Si existe coverImageUrl en BD, se usa.
+    // Si no existe, mantenemos el placeholder (Picsum) que ya estabais usando.
+    return (
+      local.coverImageUrl ||
+      `https://picsum.photos/seed/local-${local._id}/800/450`
+    )
   }
 
   return (
@@ -211,9 +276,23 @@ function LocalesAdminPage() {
                   onChange={handleChange}
                 />
               </div>
-            </div>
-            {user?.role === 'admin' && (
+
               <div className="col-12">
+                <label className="form-label">Imagen de portada (opcional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="form-control"
+                  onChange={handleCreateCoverChange}
+                />
+                <div className="form-text">
+                  Si no subes ninguna, se mostrará un placeholder automático.
+                </div>
+              </div>
+            </div>
+
+            {user?.role === 'admin' && (
+              <div className="col-12 mt-3">
                 <label className="form-label">Owner</label>
                 <select
                   name="ownerId"
@@ -238,7 +317,7 @@ function LocalesAdminPage() {
               <button
                 type="button"
                 className="btn btn-outline-secondary"
-                onClick={() => { setShowForm(false); setForm(EMPTY) }}
+                onClick={() => { setShowForm(false); setForm(EMPTY); setFormCoverFile(null) }}
               >
                 Cancelar
               </button>
@@ -267,33 +346,52 @@ function LocalesAdminPage() {
       <div className="row g-3">
         {locales.map(local => {
           const isEditing = editingId === local._id
+          const coverUrl = getLocalCover(local)
 
           return (
             <div className="col-12" key={local._id}>
               <div className="card p-3">
-                <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                  <div>
-                    <h5 className="mb-1">{local.name}</h5>
-                    <p className="text-muted small mb-0">
-                      {local.city}
-                      {local.address && ` · ${local.address}`}
-                      {local.phone && ` · ${local.phone}`}
-                      {local.email && ` · ${local.email}`}
-                    </p>
-                  </div>
-                  <span className="badge bg-light text-dark border">ID: {local._id.slice(-6)}</span>
-                </div>
+                <div className="d-flex gap-3 align-items-center flex-wrap">
+                  <img
+                    src={coverUrl}
+                    alt={local.name}
+                    style={{ width: 160, height: 90, objectFit: 'cover', borderRadius: 8 }}
+                  />
 
-                {!isEditing && (
-                  <div className="mt-3 d-flex gap-2 flex-wrap">
-                    <button className="btn btn-outline-primary" onClick={() => startEdit(local)}>
-                      Editar
-                    </button>
-                    <button className="btn btn-outline-danger" onClick={() => handleDelete(local._id)}>
-                      Eliminar
-                    </button>
+                  <div className="flex-grow-1">
+                    <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                      <div>
+                        <h5 className="mb-1">{local.name}</h5>
+                        <p className="text-muted small mb-0">
+                          {local.city}
+                          {local.address && ` · ${local.address}`}
+                          {local.phone && ` · ${local.phone}`}
+                          {local.email && ` · ${local.email}`}
+                        </p>
+                      </div>
+                      <span className="badge bg-light text-dark border">ID: {local._id.slice(-6)}</span>
+                    </div>
+
+                    {!isEditing && (
+                      <div className="mt-3 d-flex gap-2 flex-wrap">
+                        <Link
+                          to={`/locales/${local._id}`}
+                          className="btn btn-success"
+                          target="_blank"
+                        >
+                          Ver en catálogo
+                        </Link>
+
+                        <button className="btn btn-warning" onClick={() => startEdit(local)}>
+                          Editar
+                        </button>
+                        <button className="btn btn-danger" onClick={() => handleDelete(local._id)}>
+                          Eliminar
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {isEditing && (
                   <div className="mt-3">
@@ -357,24 +455,51 @@ function LocalesAdminPage() {
                         </div>
 
                         <div className="col-12">
-                          <label className="form-label">Owner (solo admin)</label>
-                          <select
-                            name="ownerId"
-                            className="form-select"
-                            value={editForm.ownerId}
-                            onChange={handleEditChange}
-                          >
-                            <option value="">Sin owner</option>
-                            {owners.map(o => (
-                              <option key={o._id} value={o._id}>
-                                {o.name} ({o.email})
-                              </option>
-                            ))}
-                          </select>
+                          <label className="form-label">Nueva portada (opcional)</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="form-control"
+                            onChange={handleEditCoverChange}
+                          />
                           <div className="form-text">
-                            Si no aparece nadie, revisa que existan usuarios con role "owner".
+                            Si seleccionas una imagen, se subirá al guardar.
                           </div>
+
+                          {local.coverImageUrl && (
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                className="btn btn-outline-danger btn-sm"
+                                onClick={() => handleDeleteCover(local._id)}
+                              >
+                                Quitar portada
+                              </button>
+                            </div>
+                          )}
                         </div>
+
+                        {user?.role === 'admin' && (
+                          <div className="col-12">
+                            <label className="form-label">Owner (solo admin)</label>
+                            <select
+                              name="ownerId"
+                              className="form-select"
+                              value={editForm.ownerId}
+                              onChange={handleEditChange}
+                            >
+                              <option value="">Sin owner</option>
+                              {owners.map(o => (
+                                <option key={o._id} value={o._id}>
+                                  {o.name} ({o.email})
+                                </option>
+                              ))}
+                            </select>
+                            <div className="form-text">
+                              Si no aparece nadie, revisa que existan usuarios con role "owner".
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-3 d-flex gap-2">
