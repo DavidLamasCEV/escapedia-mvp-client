@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getRooms } from '../services/roomsService'
+import { getPublicLocales } from '../services/localesService'
 import RoomCard from '../components/RoomCard'
 
 function HomePage() {
@@ -7,28 +8,51 @@ function HomePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Filtros
   const [filters, setFilters] = useState({
     city: '', difficulty: '', theme: '', sort: 'new'
   })
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
+  const [cities, setCities] = useState([])
+
   useEffect(() => {
     fetchRooms()
   }, [filters, page])
+
+
+  useEffect(() => {
+    fetchCities()
+  }, [])
+
+  async function fetchCities() {
+    try {
+      const res = await getPublicLocales()
+      const locales = res.data.locales || []
+      const unique = Array.from(
+        new Set(
+          locales
+            .map(l => String(l.city || '').trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b))
+
+      setCities(unique)
+    } catch (err) {
+      setCities([])
+    }
+  }
 
   async function fetchRooms() {
     setLoading(true)
     setError(null)
     try {
-      // Quitamos los campos vacíos para no contaminar la query
       const params = { page, limit: 12, ...filters }
       Object.keys(params).forEach(k => params[k] === '' && delete params[k])
 
       const res = await getRooms(params)
       setRooms(res.data.rooms || [])
-      setTotalPages(res.data.totalPages || 1)
+      setTotalPages(res.data.pages || 1)
     } catch (err) {
       setError('Error al cargar las salas')
     } finally {
@@ -38,7 +62,7 @@ function HomePage() {
 
   function handleFilterChange(e) {
     setFilters({ ...filters, [e.target.name]: e.target.value })
-    setPage(1) // Volvemos a la primera página al filtrar
+    setPage(1)
   }
 
   function resetFilters() {
@@ -58,14 +82,17 @@ function HomePage() {
         <div className="card-body">
           <div className="row g-2">
             <div className="col-md-3">
-              <input
-                type="text"
+              <select
                 name="city"
-                className="form-control"
-                placeholder="Ciudad..."
+                className="form-select"
                 value={filters.city}
                 onChange={handleFilterChange}
-              />
+              >
+                <option value="">Todas las ciudades</option>
+                {cities.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </div>
             <div className="col-md-2">
               <select name="difficulty" className="form-select" value={filters.difficulty} onChange={handleFilterChange}>
