@@ -14,6 +14,76 @@ reservar y valorar Escape Rooms.
 
 ------------------------------------------------------------------------
 
+## 🎬 Demo del proyecto
+
+📺 **Vídeo demostrativo completo:**
+
+[![Demo Escapedia](https://img.youtube.com/vi/ID_VIDEO/0.jpg)](https://www.youtube.com/watch?v=ID_VIDEO)
+
+---
+
+
+
+## 🖥️ Capturas de pantalla
+
+### 🏠 Página principal (Catálogo de salas)
+Vista pública con filtros dinámicos, paginación y ordenación.
+
+![HomePage](./assets/screenshots/HomePage.png)
+
+---
+
+### 🎭 Detalle de sala
+Información completa de la Escape Room con galería de imágenes y opción de reserva.
+
+![Ejemplo Sala](./assets/screenshots/EjemploSala.png)
+
+---
+
+### 🔐 Autenticación
+Pantalla de inicio de sesión con validación y persistencia de JWT.
+
+![Login](./assets/screenshots/Login.png)
+
+---
+
+### 🏢 Gestión de Locales (Owner)
+Panel para creación y edición de locales con subida de imagen y control de permisos.
+
+![Panel Locales](./assets/screenshots/PanelLocales.png)
+
+---
+
+### 🎭 Gestión de Salas (Owner)
+Formulario de creación y edición de salas con integración de subida de imágenes vía backend.
+
+![Panel Salas](./assets/screenshots/PanelSalas.png)
+
+---
+
+### 📅 Gestión de Reservas (Owner)
+Panel donde el propietario confirma, completa o cancela reservas según workflow.
+
+![Panel Reservas](./assets/screenshots/PanelReservas.png)
+
+---
+
+### 📅 Reservas del Usuario
+Vista del usuario con listado de reservas y estado (pending, confirmed, completed, cancelled).
+
+![Reservas Usuario](./assets/screenshots/Reservas.png)
+
+---
+
+### 🌍 Listado de Locales
+Vista pública de locales disponibles con filtrado por ciudad.
+
+![Locales](./assets/screenshots/Locales.png)
+
+
+---
+
+
 ## 📋 Tabla de contenidos
 
 -   [Objetivo académico](#1-objetivo-académico)
